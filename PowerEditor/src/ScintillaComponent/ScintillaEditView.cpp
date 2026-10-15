@@ -1652,6 +1652,60 @@ void ScintillaEditView::setWordChars() const
 		addCustomWordChars();
 }
 
+// In Assembly documents, find a register with a component around pos, e.g. r1.x, hr1.x, c12.xyzw, R0.X or r22.0:
+// 1-4 letters, digits, '.', then 1-4 letters/digits. '.' is not a word character, so Scintilla alone stops at it.
+bool ScintillaEditView::getAsmRegisterRange(intptr_t pos, intptr_t& start, intptr_t& end) const
+{
+	if (!_currentBuffer || _currentBuffer->getLangType() != L_ASM || pos < 0)
+		return false;
+
+	const intptr_t maxTokenLen = 16;
+	auto isTokenChar = [this](intptr_t p) {
+		const char c = static_cast<char>(execute(SCI_GETCHARAT, p));
+		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '.';
+	};
+
+	const intptr_t docLen = getCurrentDocLen();
+	intptr_t s = pos;
+	while (s > 0 && pos - s < maxTokenLen && isTokenChar(s - 1))
+		--s;
+	intptr_t e = pos;
+	while (e < docLen && e - s < maxTokenLen && isTokenChar(e))
+		++e;
+
+	if (e - s < 4 || (s > 0 && isTokenChar(s - 1)) || (e < docLen && isTokenChar(e)))
+		return false;
+
+	std::string token(static_cast<size_t>(e - s), '\0');
+	for (intptr_t i = s; i < e; ++i)
+		token[static_cast<size_t>(i - s)] = static_cast<char>(execute(SCI_GETCHARAT, i));
+
+	size_t i = 0;
+	while (i < token.size() && std::isalpha(static_cast<unsigned char>(token[i])))
+		++i;
+	if (i < 1 || i > 4)
+		return false;
+
+	const size_t digitsStart = i;
+	while (i < token.size() && std::isdigit(static_cast<unsigned char>(token[i])))
+		++i;
+	if (i == digitsStart || i >= token.size() || token[i] != '.')
+		return false;
+
+	const size_t componentLen = token.size() - (i + 1);
+	if (componentLen < 1 || componentLen > 4)
+		return false;
+	for (size_t j = i + 1; j < token.size(); ++j)
+	{
+		if (!std::isalnum(static_cast<unsigned char>(token[j])))
+			return false;
+	}
+
+	start = s;
+	end = e;
+	return true;
+}
+
 void ScintillaEditView::setCRLF(long color) const
 {
 	NppParameters& nppParams = NppParameters::getInstance();

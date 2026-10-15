@@ -669,6 +669,7 @@ public:
 	void addCustomWordChars() const;
 	void restoreDefaultWordChars() const;
 	void setWordChars() const;
+	bool getAsmRegisterRange(intptr_t pos, intptr_t& start, intptr_t& end) const;
 	void setCRLF(long color = -1) const;
 	void setNpcAndCcUniEOL(long color = -1) const;
 

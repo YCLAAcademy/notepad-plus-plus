@@ -141,7 +141,13 @@ void SmartHighlighter::highlightView(ScintillaEditView * pHighlightView, Scintil
 		auto wordEnd = pHighlightView->execute(SCI_WORDENDPOSITION, wordStart, true);
 
 		if (wordStart == wordEnd || wordStart != range.cpMin || wordEnd != range.cpMax)
-			return;
+		{
+			// Also accept a whole Assembly register such as r1.x
+			intptr_t regStart = 0;
+			intptr_t regEnd = 0;
+			if (!pHighlightView->getAsmRegisterRange(range.cpMin, regStart, regEnd) || regStart != range.cpMin || regEnd != range.cpMax)
+				return;
+		}
 	}
 	else
 	{

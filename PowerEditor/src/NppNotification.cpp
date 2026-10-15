@@ -373,6 +373,15 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 			else
 			{
 				// Double click with no modifiers
+				// In Assembly, select a whole register such as r1.x instead of stopping at '.'
+				intptr_t regStart = 0;
+				intptr_t regEnd = 0;
+				if (notifyView->getAsmRegisterRange(notification->position, regStart, regEnd))
+				{
+					notifyView->execute(SCI_SETSEL, regStart, regEnd);
+					break;
+				}
+
 				// Check whether cursor is within URL
 				auto indicMsk = notifyView->execute(SCI_INDICATORALLONFOR, notification->position);
 				if (!(indicMsk & (1 << URL_INDIC)))
